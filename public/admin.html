@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Lab System</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+  <style>
+    .toast-alert {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: white;
+      z-index: 1000;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .status-available { background: #dcfce7; color: #166534; }
+    .status-inuse { background: #fef3c7; color: #92400e; }
+    .status-maintenance { background: #fee2e2; color: #991b1b; }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-approved { background: #dcfce7; color: #166534; }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #6b7280;
+    }
+    
+    .loading::after {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #e5e7eb;
+      border-radius: 50%;
+      border-top-color: #3b82f6;
+      animation: spin 0.6s linear infinite;
+      margin-left: 8px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .card {
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .card:hover {
+      transform: translateY(-2px);
+    }
+    
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .modal-header h3 {
+      margin: 0;
+      color: #1e40af;
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #6b7280;
+    }
+    
+    .close-modal:hover {
+      color: #ef4444;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #374151;
+      font-size: 0.9rem;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+    
+    .btn-cancel {
+      background: #6b7280;
+    }
+    
+    .btn-cancel:hover {
+      background: #4b5563;
+    }
+    
+    .suggestions-list {
+      position: absolute;
+      background: white;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      max-height: 150px;
+      overflow-y: auto;
+      z-index: 1001;
+      width: calc(100% - 22px);
+    }
+    
+    .suggestion-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .suggestion-item:hover {
+      background: #f3f4f6;
+    }
+    
+    .relative {
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <header class="mobile-header">
+    <button class="menu-toggle" id="menuToggle">☰</button>
+    <h2>Admin Panel</h2>
+  </header>
+  
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <h2><i class="fas fa-tachometer-alt"></i> Admin Panel</h2>
+    </div>
+    <div class="sidebar-menu">
+      <a href="#dashboard" class="nav-link active"><i class="fas fa-chart-line"></i> Dashboard</a>
+      <a href="#users" class="nav-link"><i class="fas fa-users"></i> Users</a>
+      <a href="#supervisors" class="nav-link"><i class="fas fa-user-tie"></i> Lab Supervisors</a>
+      <a href="#equipment" class="nav-link"><i class="fas fa-microscope"></i> Equipment</a>
+      <a href="#reports" class="nav-link"><i class="fas fa-file-alt"></i> Reports</a>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-logout" id="logoutBtn">
+        <i class="fas fa-sign-out-alt"></i> Logout
+      </button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <section id="dashboard" class="content-section active-section">
+      <h2><i class="fas fa-chart-simple"></i> Dashboard Overview</h2>
+      <div class="cards" id="statsContainer">
+        <div class="card"><h3>Total Users</h3><p id="totalUsers">--</p></div>
+        <div class="card"><h3>Pending Approvals</h3><p id="pendingApprovals">--</p></div>
+        <div class="card"><h3>Total Equipment</h3><p id="totalEquipment">--</p></div>
+        <div class="card"><h3>Active Bookings</h3><p id="activeBookings">--</p></div>
+      </div>
+    </section>
+
+    <section id="users" class="content-section">
+      <div class="section-header">
+        <h2><i class="fas fa-user-friends"></i> Users Management</h2>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <tr><td colspan="5" class="loading">Loading users...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="supervisors" class="content-section">
+      <div class="section-header">
+        <h2><i class="fas fa-chalkboard-user"></i> Lab Supervisors</h2>
+        <button class="btn btn-approve" id="addSupervisorBtn"><i class="fas fa-plus"></i> Add Supervisor</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Department</th>
+              <th>Assigned Lab</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="supervisorsTableBody">
+            <tr><td colspan="5" class="loading">Loading supervisors...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="equipment" class="content-section">
+      <div class="section-header">
+        <h2><i class="fas fa-microscope"></i> Equipment Management</h2>
+        <button class="btn btn-approve" id="addEquipmentBtn"><i class="fas fa-plus"></i> Add Equipment</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Location</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="equipmentTableBody">
+            <tr><td colspan="5" class="loading">Loading equipment...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="reports" class="content-section">
+      <div class="section-header">
+        <h2><i class="fas fa-chart-bar"></i> Damage Reports</h2>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Equipment</th>
+              <th>Severity</th>
+              <th>Reported By</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="reportsTableBody">
+            <tr><td colspan="7" class="loading">Loading reports...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Equipment Modal -->
+  <div id="equipmentModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="equipmentModalTitle">Add New Equipment</h3>
+        <button class="close-modal" onclick="closeEquipmentModal()">&times;</button>
+      </div>
+      <form id="equipmentForm">
+        <div class="form-group relative">
+          <label>Equipment Name *</label>
+          <input type="text" id="equipmentName" required placeholder="e.g., Microscope, Centrifuge, Spectrophotometer">
+          <div id="nameSuggestions" class="suggestions-list" style="display: none;"></div>
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <select id="equipmentCategory" required>
+            <option value="">Select Category</option>
+            <option value="Microscopy">Microscopy</option>
+            <option value="Centrifugation">Centrifugation</option>
+            <option value="Spectroscopy">Spectroscopy</option>
+            <option value="PCR & Amplification">PCR & Amplification</option>
+            <option value="Chromatography">Chromatography</option>
+            <option value="Electrophoresis">Electrophoresis</option>
+            <option value="Incubation">Incubation</option>
+            <option value="Safety Equipment">Safety Equipment</option>
+            <option value="General Lab">General Lab</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" id="equipmentLocation" placeholder="e.g., Lab A-101, Room 205">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="equipmentStatus">
+            <option value="available">Available</option>
+            <option value="inuse">In Use</option>
+            <option value="maintenance">Maintenance</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="equipmentDescription" rows="3" placeholder="Equipment specifications, model number, etc."></textarea>
+        </div>
+        <input type="hidden" id="equipmentId" value="">
+        <div class="form-actions">
+          <button type="button" class="btn btn-cancel" onclick="closeEquipmentModal()">Cancel</button>
+          <button type="submit" class="btn btn-approve">Save Equipment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Supervisor Modal -->
+  <div id="supervisorModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add New Supervisor</h3>
+        <button class="close-modal" onclick="closeSupervisorModal()">&times;</button>
+      </div>
+      <form id="supervisorForm">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" id="supervisorName" required>
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" id="supervisorEmail" required>
+        </div>
+        <div class="form-group">
+          <label>Password *</label>
+          <input type="password" id="supervisorPassword" required>
+        </div>
+        <div class="form-group">
+          <label>Department</label>
+          <input type="text" id="supervisorDepartment" placeholder="e.g., Biotechnology, Chemistry">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-cancel" onclick="closeSupervisorModal()">Cancel</button>
+          <button type="submit" class="btn btn-approve">Add Supervisor</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>

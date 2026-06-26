@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Researcher Portal | Lab System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="res.css">
+    <style>
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-available { background: #dcfce7; color: #166534; }
+        .status-inuse { background: #fef3c7; color: #92400e; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #dcfce7; color: #166534; }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 0.6s linear infinite;
+            margin-left: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .equipment-option-available {
+            color: #166534;
+            background-color: #dcfce7;
+        }
+        
+        .equipment-option-inuse {
+            color: #92400e;
+            background-color: #fef3c7;
+        }
+        
+        .equipment-option-maintenance {
+            color: #991b1b;
+            background-color: #fee2e2;
+            text-decoration: line-through;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 6px 12px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        
+        .filter-btn.active {
+            background: #1e40af;
+            color: white;
+            border-color: #1e40af;
+        }
+        
+        .filter-btn:hover {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .equipment-hint {
+            font-size: 0.75rem;
+            margin-top: 5px;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        
+        .equipment-hint.available {
+            color: #166534;
+            background: #dcfce7;
+        }
+        
+        .equipment-hint.inuse {
+            color: #92400e;
+            background: #fef3c7;
+        }
+        
+        .equipment-hint.maintenance {
+            color: #991b1b;
+            background: #fee2e2;
+        }
+
+        /* Chat Widget Enhanced Styles */
+        .chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 150;
+        }
+        
+        .chat-toggle {
+            background: #1e40af;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: 0.2s;
+            position: relative;
+        }
+        
+        .chat-toggle:hover {
+            transform: scale(1.05);
+            background: #2563eb;
+        }
+        
+        .unread-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .chat-window {
+            position: fixed;
+            bottom: 85px;
+            right: 20px;
+            width: 350px;
+            height: 450px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .chat-header {
+            background: #1e3a8a;
+            color: white;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+        }
+        
+        .chat-header .close {
+            cursor: pointer;
+            opacity: 0.8;
+            font-size: 1.2rem;
+        }
+        
+        .chat-header .close:hover {
+            opacity: 1;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #f8fafc;
+        }
+        
+        .msg-bubble {
+            padding: 8px 12px;
+            border-radius: 12px;
+            max-width: 85%;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        
+        .msg-sent {
+            background: #3b82f6;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .msg-rcv {
+            background: #e2e8f0;
+            color: #1f2937;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .msg-sent small, .msg-rcv small {
+            display: block;
+            font-size: 0.65rem;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+        
+        .chat-input {
+            padding: 12px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 8px;
+            background: #fff;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            outline: none;
+            font-size: 0.85rem;
+        }
+        
+        .chat-input input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        .chat-input button {
+            background: #1e40af;
+            color: white;
+            border: none;
+            padding: 0 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: 0.2s;
+        }
+        
+        .chat-input button:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="mobile-header">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <h2>Researcher Panel</h2>
+    </header>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-microscope"></i>
+            <h2>LabManager Pro</h2>
+            <p>Researcher Workspace</p>
+        </div>
+        <div class="nav-menu">
+            <div class="nav-item active" data-section="dashboard"><i class="fas fa-chart-pie"></i><span>Overview</span></div>
+            <div class="nav-item" data-section="booking"><i class="fas fa-calendar-check"></i><span>Book Equipment</span></div>
+            <div class="nav-item" data-section="experiments"><i class="fas fa-vial"></i><span>My Experiments</span></div>
+            <div class="nav-item" data-section="upload-results"><i class="fas fa-cloud-upload-alt"></i><span>Upload My Result</span></div>
+            <div class="nav-item" data-section="sop"><i class="fas fa-book-dead"></i><span>SOP Protocols</span></div>
+            <div class="nav-item" data-section="damage-report"><i class="fas fa-exclamation-triangle"></i><span>Damage Report</span></div>
+        </div>
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <h1 id="pageTitle">Researcher Overview</h1>
+            <div class="researcher-info">
+                <div class="badge-status"><div class="online-dot"></div><span>Active Session</span></div>
+                <span class="user-meta">Welcome, <strong id="userName">Researcher</strong></span>
+            </div>
+        </div>
+
+        <section id="dashboardSection" class="content-section active-section">
+            <div class="stats-grid" id="statsGrid"></div>
+
+            <div class="dashboard-block">
+                <h3><i class="fas fa-running"></i> Rapid Actions</h3>
+                <div class="actions-row">
+                    <button class="btn btn-edit btn-act" data-target="booking">Schedule Equipment Use</button>
+                    <button class="btn btn-edit btn-act" data-target="experiments">Log Active Run Progress</button>
+                    <button class="btn btn-edit btn-act" data-target="upload-results">Upload Experiment Result</button>
+                    <button class="btn btn-edit btn-act" data-target="damage-report">Report Broken Equipment</button>
+                </div>
+            </div>
+
+            <div class="grid-two-col">
+                <div class="dashboard-block">
+                    <h3><i class="fas fa-clock"></i> Upcoming Bookings</h3>
+                    <div id="recentBookings">Loading...</div>
+                </div>
+                <div class="dashboard-block">
+                    <h3><i class="fas fa-bolt"></i> Equipment Live Availability</h3>
+                    <div id="quickEquipment">Loading...</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="bookingSection" class="content-section">
+            <div class="grid-two-col">
+                <div class="dashboard-block">
+                    <h3><i class="fas fa-plus-circle"></i> Create Booking Request</h3>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">All Equipment</button>
+                        <button class="filter-btn" data-filter="available">Only Available</button>
+                    </div>
+                    <form id="bookingForm">
+                        <div class="form-group">
+                            <label>Select Equipment <span id="equipmentCount" style="font-size:0.75rem; color:#666;"></span></label>
+                            <select id="bookingEquipment" required>
+                                <option value="">Loading equipment...</option>
+                            </select>
+                            <div id="equipmentHint" class="equipment-hint"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Start Date & Time</label>
+                            <input type="datetime-local" id="bookingStart" required>
+                        </div>
+                        <div class="form-group">
+                            <label>End Date & Time</label>
+                            <input type="datetime-local" id="bookingEnd" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Experiment Plan Synopsis</label>
+                            <textarea id="bookingPlan" placeholder="Briefly detail what you are analyzing..." rows="3" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-approve" style="width:100%; padding:10px;">Submit Schedule Request</button>
+                    </form>
+                </div>
+                <div class="dashboard-block">
+                    <h3><i class="fas fa-history"></i> Schedule Log Status</h3>
+                    <div class="table-container" id="myBookingsList">Loading...</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="experimentsSection" class="content-section">
+            <div class="grid-two-col">
+                <div class="dashboard-block">
+                    <h3><i class="fas fa-flask"></i> Log Active Run Progress</h3>
+                    <form id="experimentForm">
+                        <div class="form-group">
+                            <label>Associated Active Booking</label>
+                            <select id="expBookingSelect" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Current Status / Runtime Notes</label>
+                            <textarea id="expNotes" placeholder="Write down intermediate logs, adjustments, or errors..." rows="4" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Progress Run (%)</label>
+                            <input type="number" id="expProgress" min="0" max="100" value="10" required>
+                        </div>
+                        <button type="submit" class="btn btn-approve" style="width:100%; padding:10px;">Update Experiment Tracking</button>
+                    </form>
+                </div>
+                <div class="dashboard-block">
+                    <h3><i class="fas fa-check-double"></i> Verified Logs Archive</h3>
+                    <div id="pastResults">Loading...</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="upload-resultsSection" class="content-section">
+            <div class="grid-two-col">
+                <div class="dashboard-block">
+                    <h3><i class="fas fa-upload"></i> Submit Experiment Outcomes</h3>
+                    <form id="resultUploadForm">
+                        <div class="form-group">
+                            <label>Select Experiment Link</label>
+                            <select id="uploadExpSelect" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Dataset Title</label>
+                            <input type="text" id="resultTitle" placeholder="e.g., Absorbance Spectrum Run B" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Select Result File (PDF, CSV, Images)</label>
+                            <input type="file" id="resultFile" accept=".pdf,.csv,.jpg,.png" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Final Conclusion Summary</label>
+                            <textarea id="resultConclusion" placeholder="Provide final observations, measured values, or key conclusions..." rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-approve" style="width:100%; padding:10px;">Upload & Send Results</button>
+                    </form>
+                </div>
+                <div class="dashboard-block">
+                    <h3><i class="fas fa-folder-open"></i> Uploaded Results Ledger</h3>
+                    <div class="table-container" id="uploadedResultsTable">Loading...</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sopSection" class="content-section">
+            <h2>Standard Operating Procedures (SOP)</h2>
+            <div class="equipment-grid" id="sopList">Loading...</div>
+        </section>
+
+        <section id="damage-reportSection" class="content-section">
+            <div class="grid-two-col">
+                <div class="dashboard-block">
+                    <h3><i class="fas fa-tools"></i> Log Equipment Issue</h3>
+                    <form id="damageReportForm">
+                        <div class="form-group">
+                            <label>Select Damaged Equipment</label>
+                            <select id="damageEquipmentSelect" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Severity Level</label>
+                            <select id="damageSeverity" required>
+                                <option value="low">Low (Operational anomaly)</option>
+                                <option value="medium">Medium (Partial failure/requires attention)</option>
+                                <option value="high">High (Completely broken/unsafe)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Problem Description</label>
+                            <textarea id="damageDescription" placeholder="Explain what happened, error codes seen, or visible damage..." rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-reject" style="width:100%; padding:10px;">Submit Damage Statement</button>
+                    </form>
+                </div>
+                <div class="dashboard-block">
+                    <h3><i class="fas fa-clipboard-list"></i> Your Reported Issues</h3>
+                    <div class="table-container" id="reportedDamageTable">Loading...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Enhanced Chat Widget -->
+    <div class="chat-widget">
+        <div class="chat-toggle" onclick="toggleChat()">
+            <i class="fas fa-comments"></i>
+            <span class="unread-badge" id="unreadBadge" style="display: none;">0</span>
+        </div>
+        <div class="chat-window" id="chatWindow">
+            <div class="chat-header">
+                <strong><i class="fas fa-comment-dots"></i> Chat with Supervisor</strong>
+                <i class="fas fa-times close" onclick="toggleChat()"></i>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input">
+                <input type="text" id="chatInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i> Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="res.js"></script>
+</body>
+</html>

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supervisor Dashboard | Lab System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="super.css">
+    <style>
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #dcfce7; color: #166534; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .status-available { background: #dcfce7; color: #166534; }
+        .status-inuse { background: #fef3c7; color: #92400e; }
+        .status-maintenance { background: #fee2e2; color: #991b1b; }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 0.6s linear infinite;
+            margin-left: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Additional styles for better form UX */
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            font-size: 0.75rem;
+        }
+        
+        .equipment-status-hint {
+            margin-top: 5px;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .equipment-status-hint.available { color: #166534; background: #dcfce7; }
+        .equipment-status-hint.inuse { color: #92400e; background: #fef3c7; }
+        .equipment-status-hint.maintenance { color: #991b1b; background: #fee2e2; }
+        
+        select option[data-status="maintenance"] {
+            color: #991b1b;
+            background-color: #fee2e2;
+        }
+        
+        select option[data-status="inuse"] {
+            color: #92400e;
+            background-color: #fef3c7;
+        }
+        
+        select option[data-status="available"] {
+            color: #166534;
+            background-color: #dcfce7;
+        }
+        
+        /* Chat recipient select styles */
+        .chat-receiver-container {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+        
+        .chat-receiver-container select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #d1d5db;
+            font-size: 0.8rem;
+            background: white;
+        }
+        
+        .chat-receiver-container select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        .chat-receiver-container small {
+            font-size: 0.7rem;
+            color: #6b7280;
+            display: block;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="mobile-header">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <h2>Supervisor Panel</h2>
+    </header>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-flask"></i>
+            <h2>LabManager Pro</h2>
+            <p>Supervisor Portal</p>
+        </div>
+        <div class="nav-menu">
+            <div class="nav-item active" data-section="dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></div>
+            <div class="nav-item" data-section="requests"><i class="fas fa-calendar-plus"></i><span>Booking Requests</span></div>
+            <div class="nav-item" data-section="equipment"><i class="fas fa-microscope"></i><span>Equipment Status</span></div>
+            <div class="nav-item" data-section="experiments"><i class="fas fa-chart-line"></i><span>Track Experiments</span></div>
+            <div class="nav-item" data-section="sop"><i class="fas fa-file-alt"></i><span>SOP & Safety</span></div>
+            <div class="nav-item" data-section="damage"><i class="fas fa-exclamation-triangle"></i><span>Damage Reports</span></div>
+        </div>
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <h1 id="pageTitle">Supervisor Dashboard</h1>
+            <div class="supervisor-info">
+                <div class="online-status"><div class="online-dot"></div><span>Online</span></div>
+                <span class="user-meta"><strong id="userName">Dr. Sarah Johnson</strong></span>
+            </div>
+        </div>
+
+        <section id="dashboardSection" class="content-section active-section">
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card"><div><h3>Loading...</h3><div class="stat-number">--</div></div></div>
+            </div>
+            
+            <div class="dashboard-block">
+                <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                <div class="actions-row">
+                    <button class="btn btn-edit btn-act" data-target="requests">Review Pending Requests</button>
+                    <button class="btn btn-edit btn-act" data-target="equipment">Update Equipment Status</button>
+                    <button class="btn btn-edit" onclick="openModal('sopModal')">Upload SOP Document</button>
+                    <button class="btn btn-edit" onclick="openModal('damageModal')">Report Damage</button>
+                </div>
+            </div>
+
+            <div class="dashboard-block">
+                <h3><i class="fas fa-clock"></i> Pending Booking Requests Preview</h3>
+                <div id="pendingRequestsPreview">Loading...</div>
+            </div>
+
+            <div class="dashboard-block">
+                <h3><i class="fas fa-calendar-day"></i> Today's Schedule</h3>
+                <div id="todaySchedule">Loading...</div>
+            </div>
+        </section>
+
+        <section id="requestsSection" class="content-section">
+            <div class="section-header">
+                <h2>Equipment Booking Requests</h2>
+                <select id="requestFilter" onchange="filterRequests()">
+                    <option value="all">All Requests</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </div>
+            <div id="allRequests">Loading...</div>
+        </section>
+
+        <section id="equipmentSection" class="content-section">
+            <h2>Equipment Inventory & Status</h2>
+            <div class="equipment-grid" id="equipmentGrid">Loading...</div>
+        </section>
+
+        <section id="experimentsSection" class="content-section">
+            <h2>Active Experiments</h2>
+            <div id="activeExperiments" class="margin-b">Loading...</div>
+            <h2>Completed Experiments</h2>
+            <div id="completedExperiments">Loading...</div>
+        </section>
+
+        <section id="sopSection" class="content-section">
+            <div class="section-header">
+                <h2>SOP & Safety Documents</h2>
+                <button class="btn btn-approve" onclick="openModal('sopModal')">+ Upload New SOP</button>
+            </div>
+            <div id="sopDocuments" class="equipment-grid">Loading...</div>
+        </section>
+
+        <section id="damageSection" class="content-section">
+            <div class="section-header">
+                <h2>Equipment Damage Reports</h2>
+                <button class="btn btn-approve" onclick="openModal('damageModal')">+ Report New Issue</button>
+            </div>
+            <div class="table-container" id="damageReportsTable">Loading...</div>
+        </section>
+    </main>
+
+    <!-- Enhanced Chat Widget with Recipient Selection -->
+    <div class="chat-widget">
+        <div class="chat-toggle" onclick="toggleChat()">
+            <i class="fas fa-comments"></i>
+        </div>
+        <div class="chat-window" id="chatWindow">
+            <div class="chat-header">
+                <strong><i class="fas fa-users"></i> Lab Chat</strong>
+                <i class="fas fa-times close" onclick="toggleChat()"></i>
+            </div>
+            <div class="chat-receiver-container">
+                <select id="chatReceiverSelect">
+                    <option value="">👥 All Users (Broadcast)</option>
+                </select>
+                <small><i class="fas fa-info-circle"></i> Select recipient for private message</small>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input">
+                <input type="text" id="chatInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i> Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOP Upload Modal -->
+    <div id="sopModal" class="modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-file-upload"></i> Upload SOP Document</h3>
+            <div class="form-group">
+                <label>Document Title *</label>
+                <input type="text" id="sopTitle" placeholder="e.g., Microscope Operation SOP" required>
+            </div>
+            <div class="form-group">
+                <label>Link to Equipment (Optional)</label>
+                <select id="sopEquipmentId">
+                    <option value="">All Equipment (General SOP)</option>
+                    <!-- Equipment options will be loaded dynamically -->
+                </select>
+                <small>Select specific equipment this SOP applies to, or leave empty for general guidelines</small>
+            </div>
+            <div class="form-group">
+                <label>Document Type</label>
+                <select id="sopType">
+                    <option value="sop">SOP (Standard Operating Procedure)</option>
+                    <option value="manual">Lab Manual</option>
+                    <option value="safety">Safety Guidelines</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="sopDescription" rows="2" placeholder="Brief description of this document..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Upload File (PDF, DOC, DOCX, JPG, PNG)</label>
+                <input type="file" id="sopFile" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                <small style="color: #666;">Max file size: 5MB</small>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-approve" onclick="uploadSOP()">Upload Document</button>
+                <button class="btn btn-reject" onclick="closeModal('sopModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Damage Report Modal with Dynamic Equipment List -->
+    <div id="damageModal" class="modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-exclamation-triangle"></i> Report Equipment Damage</h3>
+            <div class="form-group">
+                <label>Select Equipment *</label>
+                <select id="damageEquipment" required>
+                    <option value="">Loading equipment list...</option>
+                </select>
+                <div id="equipmentStatusHint" class="equipment-status-hint"></div>
+                <small>Select the equipment that has issues</small>
+            </div>
+            <div class="form-group">
+                <label>Severity Level *</label>
+                <select id="damageSeverity" required>
+                    <option value="low">🔵 Low (Minor issue, equipment still usable)</option>
+                    <option value="medium">🟡 Medium (Partial failure, needs attention)</option>
+                    <option value="high">🔴 High (Completely broken / unsafe to use)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Problem Description *</label>
+                <textarea id="damageDescription" rows="3" placeholder="Describe what happened, error codes, or visible damage..." required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Reported By *</label>
+                <input type="text" id="damageReporter" placeholder="Your full name" required>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-approve" onclick="submitDamageReport()">Submit Report</button>
+                <button class="btn btn-reject" onclick="closeModal('damageModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Experiment Verification Modal -->
+    <div id="verifyModal" class="modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-check-circle"></i> Verify Experiment Completion</h3>
+            <input type="hidden" id="verifyExpId">
+            <div class="form-group">
+                <label>Verification Notes</label>
+                <textarea id="verifyNotes" rows="3" placeholder="Add verification notes, observations, or feedback..."></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-approve" onclick="confirmVerification()">Confirm Completion</button>
+                <button class="btn btn-reject" onclick="closeModal('verifyModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="super.js"></script>
+</body>
+</html>
